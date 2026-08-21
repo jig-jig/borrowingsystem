@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  # 🗄️ SERVICE 1: POSTGRESQL ENGINE
+  postgres_db:
+    image: postgres:15-alpine
+    container_name: borrowingsystem
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: borrowingsystem
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: borrowingsystem_db
+    volumes:
+      # Persistent local volume prevents data loss when containers stop
+      - postgres_data:/var/lib/postgresql/data
+      # Automatically initializes the schema on first boot sequence
+      - ./server/db/migrations/001_create_borrowings.sql:/docker-entrypoint-initdb.d/001_create_borrowings.sql
+    networks:
+      - borrowingsystem_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U borrowingsystem -d borrowingsystem_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 🟢 SERVICE 2: EXPRESS BACKEND SERVICE API
+  backend_api:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: borrowingsystem_backend
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      PORT: 5000
+      DATABASE_URL: postgres://postgres:root@postgres_db:5432/borrowingsystem_db
+      NODE_ENV: development
+    volumes:
+      - /node_modules
+    networks:
+      - borrowingsystem_network
+    depends_on:
+      postgres_db:
+        condition: service_healthy # Wait for database engine health checks before launching API routes
+
+  # 🔵 SERVICE 3: VITE FRONTEND SERVICE CLIENT
+  frontend_client:
+    build:
+      context: ./src
+      dockerfile: Dockerfile
+    container_name: borrowingsystem_frontend
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:5000/server
+    volumes:
+      - /node_modules
+    networks:
+      - borrowingsystem_network
+    depends_on:
+      - backend_api
+
+volumes:
+  postgres_data:
+
+networks:
+  borrowingsystem_network:
+    driver: bridge
