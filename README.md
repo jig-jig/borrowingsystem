@@ -1,6 +1,6 @@
 # borrowing system
 
-A local development environment for tracking borrowed items.
+A simple, lightweight Borrowing System for tracking inventory, managing user/member checkouts, and recording returns.
 
 ## Stack
 
