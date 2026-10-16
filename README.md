@@ -1,4 +1,4 @@
-# borrowing system
+# Borrowing System
 
 A simple, lightweight Borrowing System for tracking inventory, managing user/member checkouts, and recording returns.
 
